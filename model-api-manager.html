@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型与API管理工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#4E5BA6',
+                        neutral: '#F5F7FA',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-height {
+                transition: max-height 0.3s ease;
+            }
+            .card-shadow {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-inter text-gray-800 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-8">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-900 flex items-center">
+                <i class="fa fa-sitemap text-primary mr-3"></i>
+                模型与API层级管理工具
+            </h1>
+            <p class="text-gray-600 mt-2">高扩展性的层级结构，支持动态添加和管理</p>
+        </header>
+
+        <!-- 控制按钮区 -->
+        <div class="flex flex-wrap gap-3 mb-6">
+            <button id="addClusterBtn" class="flex items-center bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fa fa-plus-circle mr-2"></i>添加新平台/集群
+            </button>
+            <button id="exportBtn" class="flex items-center bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition-colors">
+                <i class="fa fa-download mr-2"></i>导出数据
+            </button>
+            <button id="importBtn" class="flex items-center bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                <i class="fa fa-upload mr-2"></i>导入数据
+            </button>
+            <input type="file" id="importFile" accept=".json" class="hidden">
+        </div>
+
+        <!-- 主要内容区 - 层级结构展示 -->
+        <div id="clustersContainer" class="space-y-4">
+            <!-- 集群/平台 1 -->
+            <div class="cluster-card bg-white rounded-xl card-shadow overflow-hidden">
+                <!-- 集群头部 -->
+                <div class="cluster-header flex flex-wrap items-center justify-between p-4 cursor-pointer bg-neutral">
+                    <div class="flex items-center">
+                        <i class="fa fa-caret-down text-primary text-xl transition-transform duration-300 mr-3"></i>
+                        <h2 class="font-semibold text-lg cluster-name">SiliconCloud</h2>
+                        <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">平台</span>
+                    </div>
+                    <div class="flex gap-2 mt-2 sm:mt-0">
+                        <button class="edit-cluster p-2 text-gray-500 hover:text-primary" title="编辑">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="add-model p-2 text-gray-500 hover:text-success" title="添加模型">
+                            <i class="fa fa-plus-square"></i>
+                        </button>
+                        <button class="delete-cluster p-2 text-gray-500 hover:text-danger" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 集群内容 -->
+                <div class="cluster-content p-4 space-y-4 transition-height">
+                    <!-- API信息 -->
+                    <div class="bg-neutral p-3 rounded-lg">
+                        <h3 class="font-medium text-gray-700 mb-2">API信息</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">API 基础URL</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-url">https://api.siliconflow.cn/v1/</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">API 密钥</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-key">sk-pqbnppgqqymtevogiczdnlvbpaorlzapwttvmtbejtvkyyum</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-500">备注信息</p>
+                            <p class="bg-white p-2 rounded text-sm api-notes">该平台API需绑定IP白名单</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 模型列表 -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">关联模型</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full model-count">1 个模型</span>
+                        </div>
+                        <div class="models-list space-y-3">
+                            <!-- 模型 1 -->
+                            <div class="model-item border border-gray-200 rounded-lg p-3 hover:border-primary/50 transition-colors">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-medium model-name">deepseek-ai/DeepSeek-R1</h4>
+                                        <p class="text-sm text-gray-500 mt-1 model-description">通用大语言模型</p>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button class="edit-model p-1.5 text-gray-500 hover:text-primary" title="编辑">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="delete-model p-1.5 text-gray-500 hover:text-danger" title="删除">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">版本：</span>
+                                        <span class="model-version">1.0</span>
+                                    </div>
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">支持功能：</span>
+                                        <span class="model-features">聊天、问答</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 集群/平台 2 -->
+            <div class="cluster-card bg-white rounded-xl card-shadow overflow-hidden">
+                <div class="cluster-header flex flex-wrap items-center justify-between p-4 cursor-pointer bg-neutral">
+                    <div class="flex items-center">
+                        <i class="fa fa-caret-down text-primary text-xl transition-transform duration-300 mr-3"></i>
+                        <h2 class="font-semibold text-lg cluster-name">火山方舟</h2>
+                        <span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">平台</span>
+                    </div>
+                    <div class="flex gap-2 mt-2 sm:mt-0">
+                        <button class="edit-cluster p-2 text-gray-500 hover:text-primary" title="编辑">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="add-model p-2 text-gray-500 hover:text-success" title="添加模型">
+                            <i class="fa fa-plus-square"></i>
+                        </button>
+                        <button class="delete-cluster p-2 text-gray-500 hover:text-danger" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="cluster-content p-4 space-y-4 transition-height">
+                    <div class="bg-neutral p-3 rounded-lg">
+                        <h3 class="font-medium text-gray-700 mb-2">API信息</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">API 基础URL</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-url">https://ark.cn-beijing.volces.com/api/v3/chat/completions</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">API 密钥</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-key">adcd2625-4dbf-4c12-a819-aa15845f6d43</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-500">备注信息</p>
+                            <p class="bg-white p-2 rounded text-sm api-notes">API 调用频率限制：100次/分钟</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">关联模型</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full model-count">1 个模型</span>
+                        </div>
+                        <div class="models-list space-y-3">
+                            <div class="model-item border border-gray-200 rounded-lg p-3 hover:border-primary/50 transition-colors">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-medium model-name">火山方舟平台模型</h4>
+                                        <p class="text-sm text-gray-500 mt-1 model-description">火山引擎旗下模型集合</p>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button class="edit-model p-1.5 text-gray-500 hover:text-primary" title="编辑">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="delete-model p-1.5 text-gray-500 hover:text-danger" title="删除">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">版本：</span>
+                                        <span class="model-version">latest</span>
+                                    </div>
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">支持功能：</span>
+                                        <span class="model-features">多轮对话、工具调用</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 集群/平台 3 -->
+            <div class="cluster-card bg-white rounded-xl card-shadow overflow-hidden">
+                <div class="cluster-header flex flex-wrap items-center justify-between p-4 cursor-pointer bg-neutral">
+                    <div class="flex items-center">
+                        <i class="fa fa-caret-down text-primary text-xl transition-transform duration-300 mr-3"></i>
+                        <h2 class="font-semibold text-lg cluster-name">DeepSeek系列</h2>
+                        <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">系列</span>
+                    </div>
+                    <div class="flex gap-2 mt-2 sm:mt-0">
+                        <button class="edit-cluster p-2 text-gray-500 hover:text-primary" title="编辑">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="add-model p-2 text-gray-500 hover:text-success" title="添加模型">
+                            <i class="fa fa-plus-square"></i>
+                        </button>
+                        <button class="delete-cluster p-2 text-gray-500 hover:text-danger" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="cluster-content p-4 space-y-4 transition-height">
+                    <div class="bg-neutral p-3 rounded-lg">
+                        <h3 class="font-medium text-gray-700 mb-2">API信息</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">API 基础URL</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-url">https://api.deepseek.com</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">API 密钥</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-key">sk-c871c4bd26bc40abb4fbf3cbc5f045b5</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-500">备注信息</p>
+                            <p class="bg-white p-2 rounded text-sm api-notes">无特殊限制</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">关联模型</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full model-count">1 个模型</span>
+                        </div>
+                        <div class="models-list space-y-3">
+                            <div class="model-item border border-gray-200 rounded-lg p-3 hover:border-primary/50 transition-colors">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-medium model-name">deepseek-chat</h4>
+                                        <p class="text-sm text-gray-500 mt-1 model-description">DeepSeek 对话模型</p>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button class="edit-model p-1.5 text-gray-500 hover:text-primary" title="编辑">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="delete-model p-1.5 text-gray-500 hover:text-danger" title="删除">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">版本：</span>
+                                        <span class="model-version">2.0</span>
+                                    </div>
+                                    <div class="bg-gray-50 p-1.5 rounded">
+                                        <span class="text-gray-500">支持功能：</span>
+                                        <span class="model-features">闲聊、代码生成</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 - 添加/编辑集群 -->
+    <div id="clusterModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4" id="clusterModalTitle">添加新平台/集群</h3>
+            <form id="clusterForm">
+                <input type="hidden" id="clusterId">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="clusterName">平台/集群名称 *</label>
+                    <input type="text" id="clusterName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="clusterType">类型</label>
+                    <select id="clusterType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                        <option value="平台">平台</option>
+                        <option value="系列">系列</option>
+                        <option value="本地部署">本地部署</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="apiUrl">API 基础URL *</label>
+                    <input type="url" id="apiUrl" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="apiKey">API 密钥 *</label>
+                    <input type="text" id="apiKey" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-1" for="apiNotes">备注信息</label>
+                    <textarea id="apiNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"></textarea>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelClusterBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 模态框 - 添加/编辑模型 -->
+    <div id="modelModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4" id="modelModalTitle">添加新模型</h3>
+            <form id="modelForm">
+                <input type="hidden" id="modelId">
+                <input type="hidden" id="modelClusterId">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="modelName">模型名称 *</label>
+                    <input type="text" id="modelName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="modelDescription">模型描述</label>
+                    <textarea id="modelDescription" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1" for="modelVersion">版本</label>
+                    <input type="text" id="modelVersion" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-1" for="modelFeatures">支持功能（用逗号分隔）</label>
+                    <input type="text" id="modelFeatures" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：聊天,问答,代码生成">
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelModelBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 z-50"></div>
+
+    <script>
+        // 数据存储
+        let clustersData = [];
+        let currentClusterId = null;
+        let currentModelId = null;
+        
+        // DOM 元素
+        const clustersContainer = document.getElementById('clustersContainer');
+        const clusterModal = document.getElementById('clusterModal');
+        const modelModal = document.getElementById('modelModal');
+        const notification = document.getElementById('notification');
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 从现有DOM加载数据
+            loadDataFromDOM();
+            
+            // 事件监听
+            setupEventListeners();
+        });
+        
+        // 从现有DOM加载数据
+        function loadDataFromDOM() {
+            const clusterCards = document.querySelectorAll('.cluster-card');
+            
+            clusterCards.forEach((card, clusterIndex) => {
+                const clusterId = `cluster-${Date.now()}-${clusterIndex}`;
+                
+                // 集群信息
+                const clusterName = card.querySelector('.cluster-name').textContent;
+                const apiUrl = card.querySelector('.api-url').textContent;
+                const apiKey = card.querySelector('.api-key').textContent;
+                const apiNotes = card.querySelector('.api-notes').textContent;
+                const clusterType = card.querySelector('.cluster-header span').textContent;
+                
+                // 模型信息
+                const modelItems = card.querySelectorAll('.model-item');
+                const models = Array.from(modelItems).map((model, modelIndex) => {
+                    return {
+                        id: `model-${clusterId}-${modelIndex}`,
+                        name: model.querySelector('.model-name').textContent,
+                        description: model.querySelector('.model-description').textContent,
+                        version: model.querySelector('.model-version').textContent,
+                        features: model.querySelector('.model-features').textContent.split('、')
+                    };
+                });
+                
+                // 添加到数据存储
+                clustersData.push({
+                    id: clusterId,
+                    name: clusterName,
+                    type: clusterType,
+                    apiUrl: apiUrl,
+                    apiKey: apiKey,
+                    notes: apiNotes,
+                    models: models
+                });
+                
+                // 设置卡片ID
+                card.setAttribute('data-id', clusterId);
+            });
+        }
+        
+        // 设置事件监听
+        function setupEventListeners() {
+            // 集群展开/折叠
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.cluster-header')) {
+                    const header = e.target.closest('.cluster-header');
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i.fa-caret-down');
+                    
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.classList.add('rotate-90');
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.classList.remove('rotate-90');
+                    }
+                }
+            });
+            
+            // 添加集群按钮
+            document.getElementById('addClusterBtn').addEventListener('click', () => {
+                openClusterModal();
+            });
+            
+            // 取消集群操作
+            document.getElementById('cancelClusterBtn').addEventListener('click', () => {
+                closeClusterModal();
+            });
+            
+            // 提交集群表单
+            document.getElementById('clusterForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveCluster();
+            });
+            
+            // 添加模型按钮
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.add-model')) {
+                    const btn = e.target.closest('.add-model');
+                    const clusterCard = btn.closest('.cluster-card');
+                    const clusterId = clusterCard.getAttribute('data-id');
+                    
+                    openModelModal(clusterId);
+                }
+            });
+            
+            // 取消模型操作
+            document.getElementById('cancelModelBtn').addEventListener('click', () => {
+                closeModelModal();
+            });
+            
+            // 提交模型表单
+            document.getElementById('modelForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveModel();
+            });
+            
+            // 编辑集群
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.edit-cluster')) {
+                    const btn = e.target.closest('.edit-cluster');
+                    const clusterCard = btn.closest('.cluster-card');
+                    const clusterId = clusterCard.getAttribute('data-id');
+                    
+                    editCluster(clusterId);
+                }
+            });
+            
+            // 编辑模型
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.edit-model')) {
+                    const btn = e.target.closest('.edit-model');
+                    const modelItem = btn.closest('.model-item');
+                    const clusterCard = btn.closest('.cluster-card');
+                    const clusterId = clusterCard.getAttribute('data-id');
+                    const modelIndex = Array.from(clusterCard.querySelectorAll('.model-item')).indexOf(modelItem);
+                    
+                    editModel(clusterId, modelIndex);
+                }
+            });
+            
+            // 删除集群
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-cluster')) {
+                    const btn = e.target.closest('.delete-cluster');
+                    const clusterCard = btn.closest('.cluster-card');
+                    const clusterId = clusterCard.getAttribute('data-id');
+                    
+                    if (confirm('确定要删除这个平台/集群吗？相关模型也会被删除。')) {
+                        deleteCluster(clusterId);
+                    }
+                }
+            });
+            
+            // 删除模型
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-model')) {
+                    const btn = e.target.closest('.delete-model');
+                    const modelItem = btn.closest('.model-item');
+                    const clusterCard = btn.closest('.cluster-card');
+                    const clusterId = clusterCard.getAttribute('data-id');
+                    const modelIndex = Array.from(clusterCard.querySelectorAll('.model-item')).indexOf(modelItem);
+                    
+                    if (confirm('确定要删除这个模型吗？')) {
+                        deleteModel(clusterId, modelIndex);
+                    }
+                }
+            });
+            
+            // 导出数据
+            document.getElementById('exportBtn').addEventListener('click', exportData);
+            
+            // 导入数据
+            document.getElementById('importBtn').addEventListener('click', () => {
+                document.getElementById('importFile').click();
+            });
+            
+            // 处理导入文件
+            document.getElementById('importFile').addEventListener('change', handleImportFile);
+        }
+        
+        // 打开集群模态框
+        function openClusterModal(clusterId = null) {
+            currentClusterId = clusterId;
+            const modalTitle = document.getElementById('clusterModalTitle');
+            
+            // 重置表单
+            document.getElementById('clusterForm').reset();
+            document.getElementById('clusterId').value = '';
+            
+            if (clusterId) {
+                // 编辑模式
+                modalTitle.textContent = '编辑平台/集群';
+                const cluster = clustersData.find(c => c.id === clusterId);
+                
+                if (cluster) {
+                    document.getElementById('clusterId').value = cluster.id;
+                    document.getElementById('clusterName').value = cluster.name;
+                    document.getElementById('clusterType').value = cluster.type;
+                    document.getElementById('apiUrl').value = cluster.apiUrl;
+                    document.getElementById('apiKey').value = cluster.apiKey;
+                    document.getElementById('apiNotes').value = cluster.notes;
+                }
+            } else {
+                // 添加模式
+                modalTitle.textContent = '添加新平台/集群';
+            }
+            
+            clusterModal.classList.remove('hidden');
+        }
+        
+        // 关闭集群模态框
+        function closeClusterModal() {
+            clusterModal.classList.add('hidden');
+            currentClusterId = null;
+        }
+        
+        // 保存集群信息
+        function saveCluster() {
+            const clusterId = document.getElementById('clusterId').value || `cluster-${Date.now()}`;
+            const clusterName = document.getElementById('clusterName').value;
+            const clusterType = document.getElementById('clusterType').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const apiNotes = document.getElementById('apiNotes').value;
+            
+            const clusterData = {
+                id: clusterId,
+                name: clusterName,
+                type: clusterType,
+                apiUrl: apiUrl,
+                apiKey: apiKey,
+                notes: apiNotes,
+                models: []
+            };
+            
+            const existingIndex = clustersData.findIndex(c => c.id === clusterId);
+            
+            if (existingIndex >= 0) {
+                // 更新现有集群
+                clusterData.models = clustersData[existingIndex].models; // 保留模型
+                clustersData[existingIndex] = clusterData;
+                updateClusterDOM(clusterData);
+                showNotification('平台/集群已更新', 'success');
+            } else {
+                // 添加新集群
+                clustersData.push(clusterData);
+                addClusterToDOM(clusterData);
+                showNotification('新平台/集群已添加', 'success');
+            }
+            
+            closeClusterModal();
+        }
+        
+        // 添加集群到DOM
+        function addClusterToDOM(cluster) {
+            const clusterCard = document.createElement('div');
+            clusterCard.className = 'cluster-card bg-white rounded-xl card-shadow overflow-hidden';
+            clusterCard.setAttribute('data-id', cluster.id);
+            
+            // 生成类型标签样式
+            let typeClass = 'bg-blue-100 text-blue-800';
+            if (cluster.type === '系列') typeClass = 'bg-green-100 text-green-800';
+            if (cluster.type === '本地部署') typeClass = 'bg-orange-100 text-orange-800';
+            if (cluster.type === '其他') typeClass = 'bg-gray-100 text-gray-800';
+            
+            clusterCard.innerHTML = `
+                <div class="cluster-header flex flex-wrap items-center justify-between p-4 cursor-pointer bg-neutral">
+                    <div class="flex items-center">
+                        <i class="fa fa-caret-down text-primary text-xl transition-transform duration-300 mr-3 rotate-90"></i>
+                        <h2 class="font-semibold text-lg cluster-name">${cluster.name}</h2>
+                        <span class="ml-2 px-2 py-0.5 ${typeClass} text-xs rounded-full">${cluster.type}</span>
+                    </div>
+                    <div class="flex gap-2 mt-2 sm:mt-0">
+                        <button class="edit-cluster p-2 text-gray-500 hover:text-primary" title="编辑">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="add-model p-2 text-gray-500 hover:text-success" title="添加模型">
+                            <i class="fa fa-plus-square"></i>
+                        </button>
+                        <button class="delete-cluster p-2 text-gray-500 hover:text-danger" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="cluster-content p-4 space-y-4 transition-height" style="max-height: 0; overflow: hidden;">
+                    <div class="bg-neutral p-3 rounded-lg">
+                        <h3 class="font-medium text-gray-700 mb-2">API信息</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">API 基础URL</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-url">${cluster.apiUrl}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">API 密钥</p>
+                                <p class="font-mono bg-white p-2 rounded break-all api-key">${cluster.apiKey}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-500">备注信息</p>
+                            <p class="bg-white p-2 rounded text-sm api-notes">${cluster.notes || '无'}</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">关联模型</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full model-count">0 个模型</span>
+                        </div>
+                        <div class="models-list space-y-3">
+                            <!-- 模型将动态添加到这里 -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            clustersContainer.appendChild(clusterCard);
+        }
+        
+        // 更新集群DOM
+        function updateClusterDOM(cluster) {
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${cluster.id}"]`);
+            if (!clusterCard) return;
+            
+            // 更新集群名称
+            clusterCard.querySelector('.cluster-name').textContent = cluster.name;
+            
+            // 更新类型和样式
+            let typeClass = 'bg-blue-100 text-blue-800';
+            if (cluster.type === '系列') typeClass = 'bg-green-100 text-green-800';
+            if (cluster.type === '本地部署') typeClass = 'bg-orange-100 text-orange-800';
+            if (cluster.type === '其他') typeClass = 'bg-gray-100 text-gray-800';
+            
+            const typeSpan = clusterCard.querySelector('.cluster-header span');
+            typeSpan.textContent = cluster.type;
+            typeSpan.className = `ml-2 px-2 py-0.5 ${typeClass} text-xs rounded-full`;
+            
+            // 更新API信息
+            clusterCard.querySelector('.api-url').textContent = cluster.apiUrl;
+            clusterCard.querySelector('.api-key').textContent = cluster.apiKey;
+            clusterCard.querySelector('.api-notes').textContent = cluster.notes || '无';
+            
+            // 更新模型计数
+            updateModelCount(cluster.id);
+        }
+        
+        // 打开模型模态框
+        function openModelModal(clusterId, modelIndex = null) {
+            currentClusterId = clusterId;
+            currentModelId = modelIndex;
+            const modalTitle = document.getElementById('modelModalTitle');
+            
+            // 重置表单
+            document.getElementById('modelForm').reset();
+            document.getElementById('modelId').value = '';
+            document.getElementById('modelClusterId').value = clusterId;
+            
+            if (modelIndex !== null) {
+                // 编辑模式
+                modalTitle.textContent = '编辑模型';
+                const cluster = clustersData.find(c => c.id === clusterId);
+                
+                if (cluster && cluster.models[modelIndex]) {
+                    const model = cluster.models[modelIndex];
+                    document.getElementById('modelId').value = modelIndex;
+                    document.getElementById('modelName').value = model.name;
+                    document.getElementById('modelDescription').value = model.description;
+                    document.getElementById('modelVersion').value = model.version;
+                    document.getElementById('modelFeatures').value = model.features.join(', ');
+                }
+            } else {
+                // 添加模式
+                modalTitle.textContent = '添加新模型';
+            }
+            
+            modelModal.classList.remove('hidden');
+        }
+        
+        // 关闭模型模态框
+        function closeModelModal() {
+            modelModal.classList.add('hidden');
+            currentClusterId = null;
+            currentModelId = null;
+        }
+        
+        // 保存模型信息
+        function saveModel() {
+            const clusterId = document.getElementById('modelClusterId').value;
+            const modelIndex = document.getElementById('modelId').value;
+            const modelName = document.getElementById('modelName').value;
+            const modelDescription = document.getElementById('modelDescription').value;
+            const modelVersion = document.getElementById('modelVersion').value;
+            const modelFeatures = document.getElementById('modelFeatures').value.split(',').map(f => f.trim());
+            
+            const clusterIndex = clustersData.findIndex(c => c.id === clusterId);
+            if (clusterIndex < 0) {
+                showNotification('找不到对应的平台/集群', 'error');
+                return;
+            }
+            
+            const modelData = {
+                id: `model-${clusterId}-${Date.now()}`,
+                name: modelName,
+                description: modelDescription,
+                version: modelVersion,
+                features: modelFeatures
+            };
+            
+            if (modelIndex !== '') {
+                // 更新现有模型
+                clustersData[clusterIndex].models[modelIndex] = modelData;
+                updateModelDOM(clusterId, modelIndex, modelData);
+                showNotification('模型已更新', 'success');
+            } else {
+                // 添加新模型
+                clustersData[clusterIndex].models.push(modelData);
+                addModelToDOM(clusterId, modelData);
+                showNotification('新模型已添加', 'success');
+            }
+            
+            // 更新模型计数
+            updateModelCount(clusterId);
+            
+            closeModelModal();
+        }
+        
+        // 添加模型到DOM
+        function addModelToDOM(clusterId, model) {
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${clusterId}"]`);
+            if (!clusterCard) return;
+            
+            const modelsList = clusterCard.querySelector('.models-list');
+            
+            const modelItem = document.createElement('div');
+            modelItem.className = 'model-item border border-gray-200 rounded-lg p-3 hover:border-primary/50 transition-colors';
+            
+            modelItem.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-medium model-name">${model.name}</h4>
+                        <p class="text-sm text-gray-500 mt-1 model-description">${model.description}</p>
+                    </div>
+                    <div class="flex gap-1">
+                        <button class="edit-model p-1.5 text-gray-500 hover:text-primary" title="编辑">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="delete-model p-1.5 text-gray-500 hover:text-danger" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div class="bg-gray-50 p-1.5 rounded">
+                        <span class="text-gray-500">版本：</span>
+                        <span class="model-version">${model.version || '未知'}</span>
+                    </div>
+                    <div class="bg-gray-50 p-1.5 rounded">
+                        <span class="text-gray-500">支持功能：</span>
+                        <span class="model-features">${model.features.join('、') || '无'}</span>
+                    </div>
+                </div>
+            `;
+            
+            modelsList.appendChild(modelItem);
+            
+            // 展开集群
+            const content = clusterCard.querySelector('.cluster-content');
+            const icon = clusterCard.querySelector('i.fa-caret-down');
+            content.style.maxHeight = content.scrollHeight + 'px';
+            icon.classList.remove('rotate-90');
+        }
+        
+        // 更新模型DOM
+        function updateModelDOM(clusterId, modelIndex, model) {
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${clusterId}"]`);
+            if (!clusterCard) return;
+            
+            const modelItems = clusterCard.querySelectorAll('.model-item');
+            if (modelIndex >= modelItems.length) return;
+            
+            const modelItem = modelItems[modelIndex];
+            
+            // 更新模型信息
+            modelItem.querySelector('.model-name').textContent = model.name;
+            modelItem.querySelector('.model-description').textContent = model.description;
+            modelItem.querySelector('.model-version').textContent = model.version || '未知';
+            modelItem.querySelector('.model-features').textContent = model.features.join('、') || '无';
+        }
+        
+        // 编辑集群
+        function editCluster(clusterId) {
+            openClusterModal(clusterId);
+        }
+        
+        // 编辑模型
+        function editModel(clusterId, modelIndex) {
+            openModelModal(clusterId, modelIndex);
+        }
+        
+        // 删除集群
+        function deleteCluster(clusterId) {
+            // 从数据中删除
+            clustersData = clustersData.filter(c => c.id !== clusterId);
+            
+            // 从DOM中删除
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${clusterId}"]`);
+            if (clusterCard) {
+                clusterCard.remove();
+                showNotification('平台/集群已删除', 'success');
+            }
+        }
+        
+        // 删除模型
+        function deleteModel(clusterId, modelIndex) {
+            const clusterIndex = clustersData.findIndex(c => c.id === clusterId);
+            if (clusterIndex < 0) return;
+            
+            // 从数据中删除
+            clustersData[clusterIndex].models.splice(modelIndex, 1);
+            
+            // 从DOM中删除
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${clusterId}"]`);
+            if (clusterCard) {
+                const modelItems = clusterCard.querySelectorAll('.model-item');
+                if (modelIndex < modelItems.length) {
+                    modelItems[modelIndex].remove();
+                    showNotification('模型已删除', 'success');
+                    
+                    // 更新模型计数
+                    updateModelCount(clusterId);
+                }
+            }
+        }
+        
+        // 更新模型计数
+        function updateModelCount(clusterId) {
+            const cluster = clustersData.find(c => c.id === clusterId);
+            if (!cluster) return;
+            
+            const clusterCard = document.querySelector(`.cluster-card[data-id="${clusterId}"]`);
+            if (clusterCard) {
+                const countElement = clusterCard.querySelector('.model-count');
+                countElement.textContent = `${cluster.models.length} 个模型`;
+            }
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 设置样式
+            let bgColor, textColor, icon;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-success';
+                    textColor = 'text-white';
+                    icon = 'fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-danger';
+                    textColor = 'text-white';
+                    icon = 'fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-warning';
+                    textColor = 'text-white';
+                    icon = 'fa-exclamation-triangle';
+                    break;
+                default:
+                    bgColor = 'bg-primary';
+                    textColor = 'text-white';
+                    icon = 'fa-info-circle';
+            }
+            
+            // 设置内容
+            notification.className = `fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transform translate-y-0 opacity-100 transition-all duration-300 flex items-center gap-2 z-50 ${bgColor} ${textColor}`;
+            notification.innerHTML = `<i class="fa ${icon}"></i><span>${message}</span>`;
+            
+            // 自动隐藏
+            setTimeout(() => {
+                notification.classList.remove('translate-y-0', 'opacity-100');
+                notification.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+        
+        // 导出数据
+        function exportData() {
+            // 准备要导出的数据（过滤掉不必要的ID）
+            const exportData = clustersData.map(cluster => {
+                return {
+                    cluster_name: cluster.name,
+                    cluster_type: cluster.type,
+                    api_base_url: cluster.apiUrl,
+                    api_key: cluster.apiKey,
+                    notes: cluster.notes,
+                    models: cluster.models.map(model => {
+                        return {
+                            model_name: model.name,
+                            description: model.description,
+                            version: model.version,
+                            supported_features: model.features
+                        };
+                    })
+                };
+            });
+            
+            // 转换为JSON
+            const jsonData = JSON.stringify({ api_clusters: exportData }, null, 2);
+            
+            // 创建下载
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `model-api-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('数据已导出', 'success');
+        }
+        
+        // 处理导入文件
+        function handleImportFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    
+                    if (importedData.api_clusters && Array.isArray(importedData.api_clusters)) {
+                        // 清空现有数据
+                        clustersData = [];
+                        clustersContainer.innerHTML = '';
+                        
+                        // 导入新数据
+                        importedData.api_clusters.forEach(cluster => {
+                            const clusterId = `cluster-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                            
+                            const models = cluster.models.map(model => {
+                                return {
+                                    id: `model-${clusterId}-${Math.random().toString(36).substr(2, 9)}`,
+                                    name: model.model_name,
+                                    description: model.description || '',
+                                    version: model.version || '',
+                                    features: model.supported_features || []
+                                };
+                            });
+                            
+                            const newCluster = {
+                                id: clusterId,
+                                name: cluster.cluster_name,
+                                type: cluster.cluster_type || '平台',
+                                apiUrl: cluster.api_base_url,
+                                apiKey: cluster.api_key,
+                                notes: cluster.notes || '',
+                                models: models
+                            };
+                            
+                            clustersData.push(newCluster);
+                            addClusterToDOM(newCluster);
+                            
+                            // 添加模型
+                            models.forEach(model => {
+                                addModelToDOM(clusterId, model);
+                            });
+                        });
+                        
+                        showNotification('数据导入成功', 'success');
+                    } else {
+                        throw new Error('无效的数据格式');
+                    }
+                } catch (error) {
+                    console.error('导入失败:', error);
+                    showNotification('导入失败：无效的文件格式', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+            
+            // 重置文件输入
+            e.target.value = '';
+        }
+    </script>
+</body>
+</html>
